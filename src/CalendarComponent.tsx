@@ -17,7 +17,7 @@ const CalendarComponent = () => {
     const [showDialog, setShowDialog] = useState<boolean>(false);
     const [events, setEvents] = useState<Event[]>([]);
 
-    const today = useMemo(() => new Date(), []);
+    const today = useMemo(() => new Date(new Date().toDateString()), []);
 
     const firstDate = useMemo(() => {
         const retDate = new Date(today);
