@@ -50,7 +50,7 @@ const CalendarComponent = () => {
                             const dt = new Date(e.date);
                             return (dt <= lastDate) && (dt >= firstDate)
                                 && (dt.getDay() !== 6) && (dt.getDay() !== 0)
-                        }));
+                        }).sort((a, b) => new Date(a.date).getDate() - new Date(b.date).getDate()));
                     }
                 });
             });
@@ -68,8 +68,7 @@ const CalendarComponent = () => {
             redirect: "follow"
         } as RequestInit;
         fetch("https://getpantry.cloud/apiv1/pantry/" + apiKey + "/basket/attendance", requestOptions)
-            .then((response) => response.text())
-            .then((result) => alert(result))
+            .then((response) => alert("Saved Successfully!"))
             .catch((error) => {
                 console.error(error);
                 alert(error);
@@ -105,7 +104,7 @@ const CalendarComponent = () => {
         if (selectedEventType) {
             updatedEvents.push({ date: selectedDate, type: selectedEventType });
         }
-        setEvents([...updatedEvents]);
+        setEvents([...updatedEvents.sort((a, b) => new Date(a.date).getDate() - new Date(b.date).getDate())]);
     };
 
     const handleCancelClick = () => {
@@ -119,7 +118,7 @@ const CalendarComponent = () => {
 
     const officeDays = useMemo(() => {
         const lastWeekEnd = new Date(today);
-        if(lastWeekEnd.getDay() === 6){
+        if (lastWeekEnd.getDay() === 6) {
             lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
         }
         return events.filter(e => e.type === "office" && new Date(e.date) < lastWeekEnd).length;
@@ -127,7 +126,7 @@ const CalendarComponent = () => {
 
     const oooDays = useMemo(() => {
         const lastWeekEnd = new Date(today);
-        if(lastWeekEnd.getDay() === 6){
+        if (lastWeekEnd.getDay() === 6) {
             lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
         }
         return events.filter(e => (e.type === "holiday" || e.type === "ooo") && new Date(e.date) < lastWeekEnd).length;
@@ -135,13 +134,22 @@ const CalendarComponent = () => {
 
     const wfhDays = useMemo(() => {
         const lastWeekEnd = new Date(today);
-        if(lastWeekEnd.getDay() === 6){
+        if (lastWeekEnd.getDay() === 6) {
             lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
         }
         return events.filter(e => e.type === "wfh" && new Date(e.date) < lastWeekEnd).length;
     }, [events, today]);
 
-    const percetage = useMemo(() => ((100 * (officeDays + oooDays))/(60 - wfhDays)).toFixed(2), [officeDays, oooDays, wfhDays]);
+    const percetage = useMemo(() => ((100 * (officeDays + oooDays)) / (60 - wfhDays)).toFixed(2), [officeDays, oooDays, wfhDays]);
+
+    const predictWeeks = useMemo(() => {
+        if (events && events.length > 0) {
+            const excessDays = (Number(percetage) - 60) * (60 / 100);
+            return ((new Date(events[Math.floor(excessDays)].date).getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7)).toFixed(2);
+        } else {
+            return 0;
+        }
+    }, [events, percetage, firstDate]);
 
     if (apiKey) {
         return <div>
@@ -150,7 +158,10 @@ const CalendarComponent = () => {
                 <div>
                     <Calendar onClickDay={handleDateClick} maxDate={lastDate} minDate={firstDate}
                         tileClassName={getDateStyle} tileDisabled={disableWeekends} />
+                    <br />
                     <input type='button' value="Save" onClick={saveToPantry} />
+                    <br />
+                    <br />
                     <table border={2}>
                         <thead>
                             <tr>
@@ -166,6 +177,15 @@ const CalendarComponent = () => {
                                 <td>{oooDays}</td>
                                 <td>{wfhDays}</td>
                                 <td>{percetage + " %"}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br />
+                    <table border={2}>
+                        <tbody>
+                            <tr>
+                                <th>How many weeks I can WFH ?</th>
+                                <td>{predictWeeks + " weeks"}</td>
                             </tr>
                         </tbody>
                     </table>
