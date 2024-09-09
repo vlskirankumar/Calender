@@ -50,7 +50,7 @@ const CalendarComponent = () => {
                             const dt = new Date(e.date);
                             return (dt <= lastDate) && (dt >= firstDate)
                                 && (dt.getDay() !== 6) && (dt.getDay() !== 0)
-                        }).sort((a, b) => new Date(a.date).getDate() - new Date(b.date).getDate()));
+                        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
                     }
                 });
             });
@@ -104,7 +104,7 @@ const CalendarComponent = () => {
         if (selectedEventType) {
             updatedEvents.push({ date: selectedDate, type: selectedEventType });
         }
-        setEvents([...updatedEvents.sort((a, b) => new Date(a.date).getDate() - new Date(b.date).getDate())]);
+        setEvents([...updatedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())]);
     };
 
     const handleCancelClick = () => {
