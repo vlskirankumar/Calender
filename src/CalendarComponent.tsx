@@ -40,6 +40,14 @@ const CalendarComponent = () => {
         return retDate;
     }, [today]);
 
+    const lastWeekEnd = useMemo(() => {
+        const retDate = new Date(today);
+        if (retDate.getDay() !== 6) {
+            retDate.setDate(retDate.getDate() - retDate.getDay());
+        }
+        return retDate;
+    }, [today])
+
     useEffect(() => {
         if (apiKey) {
             fetch(`https://getpantry.cloud/apiv1/pantry/${apiKey}/basket/attendance`, { method: "GET" }).then((resp) => {
@@ -117,28 +125,16 @@ const CalendarComponent = () => {
     };
 
     const officeDays = useMemo(() => {
-        const lastWeekEnd = new Date(today);
-        if (lastWeekEnd.getDay() === 6) {
-            lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
-        }
         return events.filter(e => e.type === "office" && new Date(e.date) < lastWeekEnd).length;
-    }, [events, today]);
+    }, [events, lastWeekEnd]);
 
     const oooDays = useMemo(() => {
-        const lastWeekEnd = new Date(today);
-        if (lastWeekEnd.getDay() === 6) {
-            lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
-        }
         return events.filter(e => (e.type === "holiday" || e.type === "ooo") && new Date(e.date) < lastWeekEnd).length;
-    }, [events, today]);
+    }, [events, lastWeekEnd]);
 
     const wfhDays = useMemo(() => {
-        const lastWeekEnd = new Date(today);
-        if (lastWeekEnd.getDay() === 6) {
-            lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay());
-        }
         return events.filter(e => e.type === "wfh" && new Date(e.date) < lastWeekEnd).length;
-    }, [events, today]);
+    }, [events, lastWeekEnd]);
 
     const percetage = useMemo(() => ((100 * (officeDays + oooDays)) / (60 - wfhDays)).toFixed(2), [officeDays, oooDays, wfhDays]);
 
