@@ -141,7 +141,7 @@ const CalendarComponent = () => {
     const predictWeeks = useMemo(() => {
         if (events && events.length > 0) {
             const excessDays = (Number(percetage) - 60) * (60 / 100);
-            return ((new Date(events[Math.floor(excessDays)].date).getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7)).toFixed(2);
+            return ((new Date(events[Math.round(excessDays)].date).getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7)).toFixed(2);
         } else {
             return 0;
         }
