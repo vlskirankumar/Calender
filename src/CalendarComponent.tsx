@@ -218,7 +218,7 @@ const CalendarComponent = () => {
     if (apiKey) {
         return <div>
             <h1>Calendar</h1>
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
                 <div>
                     <Calendar onClickDay={handleDateClick} maxDate={lastDate} minDate={firstDate}
                         tileClassName={getDateStyle} tileDisabled={disableWeekends} />
