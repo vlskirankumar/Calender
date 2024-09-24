@@ -15,7 +15,8 @@ const CalendarComponent = () => {
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedEventType, setSelectedEventType] = useState<EventType>();
     const [showDialog, setShowDialog] = useState<boolean>(false);
-    const [events, setEvents] = useState<Event[]>([]);
+    const [events, setEvents] = useState<Event[]>(JSON.parse(localStorage.getItem("attendanceData") ?? "[]"));
+    const [noAPI, setNoAPI] = useState<boolean>(false);
 
     const today = useMemo(() => new Date(new Date().toDateString()), []);
 
@@ -46,23 +47,35 @@ const CalendarComponent = () => {
             retDate.setDate(retDate.getDate() - retDate.getDay());
         }
         return retDate;
-    }, [today])
+    }, [today]);
+
+    const fetchData = async () => {
+        if (apiKey) {
+            try {
+                let resp = await fetch(`https://getpantry.cloud/apiv1/pantry/${apiKey}/basket/attendance`, { method: "GET" });
+                let j = await resp.json();
+                const eventsData = j.data as Event[];
+                if (eventsData && eventsData.length > 0) {
+                    setEvents(eventsData.filter(e => {
+                        const dt = new Date(e.date);
+                        return (dt <= lastDate) && (dt >= firstDate)
+                            && (dt.getDay() !== 6) && (dt.getDay() !== 0)
+                    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+                    setNoAPI(false);
+                }
+            } catch (err) {
+                alert(err);
+                setNoAPI(true);
+            }
+        }
+    };
 
     useEffect(() => {
-        if (apiKey) {
-            fetch(`https://getpantry.cloud/apiv1/pantry/${apiKey}/basket/attendance`, { method: "GET" }).then((resp) => {
-                resp.json().then(j => {
-                    const eventsData = j.data as Event[];
-                    if (eventsData && eventsData.length > 0) {
-                        setEvents(eventsData.filter(e => {
-                            const dt = new Date(e.date);
-                            return (dt <= lastDate) && (dt >= firstDate)
-                                && (dt.getDay() !== 6) && (dt.getDay() !== 0)
-                        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-                    }
-                });
-            });
-        }
+        localStorage.setItem("attendanceData", JSON.stringify(events));
+    }, [events]);
+
+    useEffect(() => {
+        fetchData();
     }, [apiKey, firstDate, lastDate]);
 
     const saveToPantry = async () => {
@@ -75,12 +88,63 @@ const CalendarComponent = () => {
             body: raw,
             redirect: "follow"
         } as RequestInit;
-        fetch("https://getpantry.cloud/apiv1/pantry/" + apiKey + "/basket/attendance", requestOptions)
-            .then((response) => alert("Saved Successfully!"))
-            .catch((error) => {
-                console.error(error);
-                alert(error);
-            });
+        try {
+            await fetch("https://getpantry.cloud/apiv1/pantry/" + apiKey + "/basket/attendance", requestOptions);
+            alert("Saved Successfully!");
+            setNoAPI(false);
+        } catch (err) {
+            alert(err);
+            setNoAPI(true);
+        }
+    };
+
+    const downloadJson = async () => {
+        const json = JSON.stringify(events, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const href = URL.createObjectURL(blob);
+
+        // create "a" HTLM element with href to file
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = "attendance.json";
+        document.body.appendChild(link);
+        link.click();
+
+        // clean up "a" element & remove ObjectURL
+        document.body.removeChild(link);
+        URL.revokeObjectURL(href);
+    };
+
+    const loadJson = async (changeEvent: React.ChangeEvent<HTMLInputElement>) => {
+        let reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                let fileObj = JSON.parse(event.target?.result?.toString() ?? "[]") as Event[];
+                if (fileObj && Array.isArray(fileObj) && fileObj.length > 0 && fileObj[0].date !== undefined) {
+                    setEvents(fileObj);
+                } else {
+                    alert("inValid Json Data file provided!");
+                }
+            } catch (err) {
+                alert("inValid Json Data file provided!");
+                alert(err);
+            }
+
+        };
+
+        reader.onerror = (event) => {
+            alert("inValid Json Data file provided!");
+            alert(event.target?.error);
+        };
+
+        if (changeEvent.target.files && changeEvent.target.files.length > 0) {
+            try {
+                reader.readAsText(changeEvent.target.files[0]);
+            } catch (err) {
+                alert("inValid Json Data file provided!");
+                alert(err);
+            }
+        }
     };
 
     const handleDateClick = (date: Date, event: React.MouseEvent<HTMLButtonElement>) => {
@@ -141,7 +205,11 @@ const CalendarComponent = () => {
     const predictWeeks = useMemo(() => {
         if (events && events.length > 0) {
             const excessDays = (Number(percetage) - 60) * (60 / 100);
-            return ((new Date(events[Math.round(excessDays)].date).getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7)).toFixed(2);
+            if (excessDays > 0) {
+                return ((new Date(events[Math.round(excessDays)].date).getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 7)).toFixed(2);
+            } else {
+                return 0;
+            }
         } else {
             return 0;
         }
@@ -187,7 +255,13 @@ const CalendarComponent = () => {
                     </table>
                 </div>
                 <div>
-                    {/* <Calendar onClickDay={handleDateClick} /> */}
+                    {
+                        noAPI &&
+                        <div>
+                            <input type='button' value="Download Data" onClick={downloadJson} />
+                            <input type='file' onChange={loadJson} />
+                        </div>
+                    }
                 </div>
             </div>
             {
